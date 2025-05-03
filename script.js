@@ -53,66 +53,89 @@ function submitScore() {
   });
 }
 
-let chart;
+let charts = {}; // Store multiple charts for each subject
 
 function fetchAndDisplayScores() {
   const user = auth.currentUser;
   if (!user) return;
 
-  db.collection("scores")
-    .where("uid", "==", user.uid)
-    .orderBy("timestamp")
-    .get()
-    .then(snapshot => {
-      const labels = [];
-      const scores = [];
+  // Define the subjects you want to display separately
+  const subjects = ["Maths", "Science", "English"];
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const date = data.timestamp?.toDate().toLocaleDateString() || "Unknown";
-        labels.push(`${data.subject} (${date})`);
-        scores.push(data.score);
-      });
+  subjects.forEach(subject => {
+    db.collection("scores")
+      .where("uid", "==", user.uid)
+      .where("subject", "==", subject)
+      .orderBy("timestamp")
+      .get()
+      .then(snapshot => {
+        const labels = [];
+        const scores = [];
 
-      drawChart(labels, scores);
-
-      // Fetch average score for all users
-      db.collection("scores").get().then(allSnapshot => {
-        let total = 0, count = 0;
-        allSnapshot.forEach(doc => {
-          const s = doc.data().score;
-          if (!isNaN(s)) {
-            total += s;
-            count++;
-          }
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const date = data.timestamp?.toDate().toLocaleDateString() || "Unknown";
+          labels.push(`${data.year} (${date})`);
+          scores.push(data.score);
         });
-        const average = count > 0 ? (total / count).toFixed(2) : "N/A";
-        document.getElementById("averageText").innerText =
-          `Overall Average Score: ${average}%`;
+
+        // Fetch average score for this subject across all users
+        db.collection("scores")
+          .where("subject", "==", subject)
+          .get()
+          .then(allSnapshot => {
+            let total = 0, count = 0;
+            allSnapshot.forEach(doc => {
+              const s = doc.data().score;
+              if (!isNaN(s)) {
+                total += s;
+                count++;
+              }
+            });
+            const average = count > 0 ? (total / count).toFixed(2) : "N/A";
+            document.getElementById("averageText").innerText =
+              `Average Score for ${subject}: ${average}%`;
+
+            // Draw chart with a second line for the average
+            drawChart(subject, labels, scores, average);
+          });
       });
-    });
+  });
 }
 
-function drawChart(labels, scores) {
-  const ctx = document.getElementById("scoreChart").getContext("2d");
+function drawChart(subject, labels, scores, average) {
+  const ctx = document.getElementById(`${subject}Chart`).getContext("2d");
 
-  if (chart) chart.destroy();
+  if (charts[subject]) charts[subject].destroy(); // Destroy previous chart
 
-  chart = new Chart(ctx, {
+  // Draw a new chart for each subject
+  charts[subject] = new Chart(ctx, {
     type: "line",
     data: {
       labels: labels,
-      datasets: [{
-        label: "Your Scores",
-        data: scores,
-        backgroundColor: "rgba(33, 150, 243, 0.2)",
-        borderColor: "#2196f3",
-        borderWidth: 2,
-        fill: true,
-        tension: 0.3,
-        pointRadius: 4,
-        pointBackgroundColor: "#2196f3"
-      }]
+      datasets: [
+        {
+          label: `${subject} Scores`,
+          data: scores,
+          backgroundColor: "rgba(33, 150, 243, 0.2)",
+          borderColor: "#2196f3",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: "#2196f3"
+        },
+        {
+          label: `Average Score for ${subject}`,
+          data: Array(scores.length).fill(parseFloat(average)),
+          backgroundColor: "rgba(76, 175, 80, 0.2)",
+          borderColor: "#4caf50",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0 // No points for average
+        }
+      ]
     },
     options: {
       responsive: true,
