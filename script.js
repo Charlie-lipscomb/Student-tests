@@ -1,23 +1,27 @@
+// Auth state listener
 auth.onAuthStateChanged(user => {
   if (user) {
-    document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('app-section').style.display = 'block';
+    document.getElementById("auth-section").style.display = "none";
+    document.getElementById("app-section").style.display = "block";
+    fetchAndDisplayScores();
   } else {
-    document.getElementById('auth-section').style.display = 'block';
-    document.getElementById('app-section').style.display = 'none';
+    document.getElementById("auth-section").style.display = "block";
+    document.getElementById("app-section").style.display = "none";
   }
 });
 
-function login() {
-  const email = document.getElementById("email").value;
-  const pass = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
-}
-
 function signup() {
   const email = document.getElementById("email").value;
-  const pass = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+  const password = document.getElementById("password").value;
+  auth.createUserWithEmailAndPassword(email, password)
+    .catch(e => alert(e.message));
+}
+
+function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(e => alert(e.message));
 }
 
 function logout() {
@@ -25,37 +29,38 @@ function logout() {
 }
 
 function submitScore() {
-  const score = parseInt(document.getElementById("score").value);
+  const user = auth.currentUser;
   const subject = document.getElementById("subject").value;
   const year = document.getElementById("year").value;
-  const uid = auth.currentUser.uid;
+  const score = parseFloat(document.getElementById("score").value);
 
-  if (!subject || !year || isNaN(score)) {
-    alert("Please complete all fields.");
+  if (!user || !subject || !year || isNaN(score)) {
+    alert("Please fill in all fields correctly.");
     return;
   }
 
   db.collection("scores").add({
-    uid,
-    score,
+    uid: user.uid,
     subject,
     year,
-    timestamp: new Date()
+    score,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
-    document.getElementById("score").value = "";
-    loadScores(subject, year);
+    fetchAndDisplayScores();
+  }).catch((error) => {
+    console.error("Error adding score: ", error);
+    alert("Failed to submit score.");
   });
 }
 
 let chart;
 
-function loadScores(subject, year) {
-  const uid = auth.currentUser.uid;
+function fetchAndDisplayScores() {
+  const user = auth.currentUser;
+  if (!user) return;
 
   db.collection("scores")
-    .where("uid", "==", uid)
-    .where("subject", "==", subject)
-    .where("year", "==", year)
+    .where("uid", "==", user.uid)
     .orderBy("timestamp")
     .get()
     .then(snapshot => {
@@ -64,61 +69,59 @@ function loadScores(subject, year) {
 
       snapshot.forEach(doc => {
         const data = doc.data();
-        labels.push(new Date(data.timestamp.toDate()).toLocaleDateString());
+        const date = data.timestamp?.toDate().toLocaleDateString() || "Unknown";
+        labels.push(`${data.subject} (${date})`);
         scores.push(data.score);
       });
 
-      if (chart) chart.destroy();
-      const ctx = document.getElementById("scoreChart").getContext("2d");
-      chart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [{
-            label: "Your Scores",
-            data: scores,
-            borderColor: "#0d6efd",
-            fill: false,
-            tension: 0.3
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: { beginAtZero: true, max: 100 }
+      drawChart(labels, scores);
+
+      // Fetch average score for all users
+      db.collection("scores").get().then(allSnapshot => {
+        let total = 0, count = 0;
+        allSnapshot.forEach(doc => {
+          const s = doc.data().score;
+          if (!isNaN(s)) {
+            total += s;
+            count++;
           }
-        }
+        });
+        const average = count > 0 ? (total / count).toFixed(2) : "N/A";
+        document.getElementById("averageText").innerText =
+          `Overall Average Score: ${average}%`;
       });
-
-      loadAverage(subject, year);
     });
 }
 
-function loadAverage(subject, year) {
-  db.collection("scores")
-    .where("subject", "==", subject)
-    .where("year", "==", year)
-    .get()
-    .then(snapshot => {
-      const allScores = snapshot.docs.map(doc => doc.data().score);
-      const avg =
-        allScores.length > 0
-          ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1)
-          : "N/A";
+function drawChart(labels, scores) {
+  const ctx = document.getElementById("scoreChart").getContext("2d");
 
-      document.getElementById("averageText").innerText = `Average for ${year} ${subject}: ${avg}%`;
-    });
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Your Scores",
+        data: scores,
+        backgroundColor: "rgba(33, 150, 243, 0.2)",
+        borderColor: "#2196f3",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: "#2196f3"
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
 }
-
-// Auto load on subject/year change
-document.getElementById("subject").addEventListener("change", () => {
-  const subject = document.getElementById("subject").value;
-  const year = document.getElementById("year").value;
-  if (subject && year) loadScores(subject, year);
-});
-
-document.getElementById("year").addEventListener("change", () => {
-  const subject = document.getElementById("subject").value;
-  const year = document.getElementById("year").value;
-  if (subject && year) loadScores(subject, year);
-});
