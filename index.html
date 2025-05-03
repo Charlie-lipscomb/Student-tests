@@ -1,57 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Student Test Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  >
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-light">
-  <div class="container py-5">
-    <div class="text-center mb-4">
-      <h1>Student Test Portal</h1>
-      <p class="text-muted">Track your test performance over time</p>
+<body>
+  <div class="container">
+    <h1>Student Test Tracker</h1>
+
+    <!-- Auth section -->
+    <div id="auth-section">
+      <input type="email" id="email" placeholder="Email" />
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="login()">Login</button>
+      <button onclick="signup()">Sign Up</button>
     </div>
 
-    <div id="auth-section" class="card p-4 shadow-sm">
-      <div class="mb-3">
-        <input id="email" type="email" class="form-control" placeholder="Email">
-      </div>
-      <div class="mb-3">
-        <input id="password" type="password" class="form-control" placeholder="Password">
-      </div>
-      <div class="d-grid gap-2">
-        <button onclick="login()" class="btn btn-primary">Login</button>
-        <button onclick="signup()" class="btn btn-outline-secondary">Sign Up</button>
-      </div>
-    </div>
+    <!-- Main app -->
+    <div id="app-section" style="display:none;">
+      <p>Welcome! <button onclick="logout()">Log Out</button></p>
 
-    <div id="app-section" style="display:none;" class="mt-5">
-      <div class="card p-4 shadow-sm mb-4">
-        <h4>Submit Test Score</h4>
-        <div class="input-group mb-3">
-          <input id="score" type="number" class="form-control" placeholder="Score out of 100">
-          <button onclick="submitScore()" class="btn btn-success">Submit</button>
-        </div>
-        <button onclick="logout()" class="btn btn-sm btn-danger">Log Out</button>
-      </div>
+      <h2>Submit a Score</h2>
+      <select id="subject">
+        <option value="">Choose Subject</option>
+        <option value="Maths">Maths</option>
+        <option value="Science">Biology</option>
+        <option value="English">Chemistry</option>
+        <option value="Maths">Physics</option>
+        <option value="Science">English</option>
+        <option value="English">French</option>
+        <option value="Maths">German</option>
+        <option value="Science">Italian</option>
+        <option value="English">Spanish</option>
+        <option value="Maths">Latin</option>
+        <option value="Science">Greek</option>
+        <option value="English">Classical Civilisation</option>
+        <option value="Maths">Geography</option>
+        <option value="Science">History</option>
+        <option value="English">Music</option>
+        <option value="Maths">Sport Science</option>
+        <option value="Science">Computer Science</option>
+        <option value="English">TP</option>
+        <option value="Maths">Economics</option>
+      </select>
 
-      <div class="card p-4 shadow-sm">
-        <h4>Your Score History</h4>
-        <canvas id="scoreChart"></canvas>
-      </div>
+      <select id="year">
+        <option value="">Choose Year</option>
+        <option value="Ls 1">Ls 1</option>
+        <option value="Ls 2">Ls 2</option>
+        <option value="Removes">Removes</option>
+        <option value="Middles">Middles</option>
+        <option value="Fiths">Fiths</option>
+        <option value="Lower Sixth">Lower Sixth</option>
+        <option value="Upper Sixth">Upper Sixth</option>
+        
+      </select>
+
+      <input type="number" id="score" placeholder="Enter test score (%)" />
+      <button onclick="submitScore()">Submit Score</button>
+
+      <h2>Your Progress</h2>
+      <canvas id="scoreChart" height="100"></canvas>
+      <p id="averageText">Average will appear here.</p>
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="firebase-config.js"></script>
+  <!-- Firebase config + app logic -->
+  <script>
+    // TODO: Replace with your Firebase project config:
+    const firebaseConfig = {
+      apiKey: "AIzaSyDWZ3NbTOaRoUjh7stKklyCiBDWH4mdRC0",
+      authDomain: "student-tests-f85fd.firebaseapp.com",
+      projectId: "student-tests-f85fd",
+      storageBucket: "student-tests-f85fd.firebasestorage.app",
+      messagingSenderId: "878760132447",
+      appId: "1:878760132447:web:fad870bd99112df6e0c0ea"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
   <script src="script.js"></script>
 </body>
 </html>
