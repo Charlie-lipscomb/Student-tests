@@ -30,26 +30,26 @@
       <select id="subject">
         <option value="">Choose Subject</option>
         <option value="Maths">Maths</option>
-        <option value="Science">Biology</option>
-        <option value="English">Chemistry</option>
-        <option value="Maths">Physics</option>
-        <option value="Science">English</option>
-        <option value="English">French</option>
-        <option value="Maths">German</option>
-        <option value="Science">Italian</option>
-        <option value="English">Spanish</option>
-        <option value="Maths">Latin</option>
-        <option value="Science">Greek</option>
-        <option value="English">Classical Civilisation</option>
-        <option value="Maths">Geography</option>
-        <option value="Science">History</option>
-        <option value="English">Music</option>
-        <option value="Maths">Sport Science</option>
-        <option value="Science">Computer Science</option>
-        <option value="English">TP</option>
-        <option value="Maths">Economics</option>
+        <option value="Biology">Biology</option>
+        <option value="Chemistry">Chemistry</option>
+        <option value="Physics">Physics</option>
+        <option value="English">English</option>
+        <option value="French">French</option>
+        <option value="German">German</option>
+        <option value="Italian">Italian</option>
+        <option value="Spanish">Spanish</option>
+        <option value="Latin">Latin</option>
+        <option value="Greek">Greek</option>
+        <option value="Classical Civilisation">Classical Civilisation</option>
+        <option value="Geography">Geography</option>
+        <option value="History">History</option>
+        <option value="Music">Music</option>
+        <option value="Sport Science">Sport Science</option>
+        <option value="Computer Science">Computer Science</option>
+        <option value="TP">TP</option>
+        <option value="Economics">Economics</option>
       </select>
-
+      
       <select id="year">
         <option value="">Choose Year</option>
         <option value="Ls 1">Ls 1</option>
@@ -66,8 +66,27 @@
       <button onclick="submitScore()">Submit Score</button>
 
       <h2>Your Progress</h2>
-      <canvas id="scoreChart" height="100"></canvas>
-      <p id="averageText">Average will appear here.</p>
+      <div id="charts-container">
+        <canvas id="MathsChart"></canvas>
+        <canvas id="BiologyChart"></canvas>
+        <canvas id="ChemistryChart"></canvas>
+        <canvas id="PhysicsChart"></canvas>
+        <canvas id="EnglishChart"></canvas>
+        <canvas id="FrenchChart"></canvas>
+        <canvas id="GermanChart"></canvas>
+        <canvas id="ItalianChart"></canvas>
+        <canvas id="SpanishChart"></canvas>
+        <canvas id="LatinChart"></canvas>
+        <canvas id="GreekChart"></canvas>
+        <canvas id="Classical CivilisationChart"></canvas>
+        <canvas id="GeographyChart"></canvas>
+        <canvas id="HistoryChart"></canvas>
+        <canvas id="MusicChart"></canvas>
+        <canvas id="Sport ScienceChart"></canvas>
+        <canvas id="Computer ScienceChart"></canvas>
+        <canvas id="TPChart"></canvas>
+        <canvas id="EconomicsChart"></canvas>
+      </div>
     </div>
   </div>
 
