@@ -1,0 +1,43 @@
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  background: linear-gradient(to right, #f8f9fa, #e9ecef);
+  color: #333;
+  padding-bottom: 40px;
+}
+
+h1 {
+  font-weight: 700;
+  font-size: 2.5rem;
+  color: #0d6efd;
+}
+
+.card {
+  max-width: 600px;
+  margin: 2rem auto;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+}
+
+input.form-control {
+  border-radius: 10px;
+  padding: 10px 15px;
+  font-size: 1rem;
+}
+
+button.btn {
+  border-radius: 10px;
+  font-size: 1rem;
+  padding: 10px 15px;
+  transition: all 0.2s ease;
+}
+
+button.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+#scoreChart {
+  max-height: 300px;
+}
