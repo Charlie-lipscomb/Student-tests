@@ -3,109 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Dashboard</title>
+  <title>Student Score Tracker</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Student Test Tracker</h1>
+  <div id="login">
+    <h2>Login</h2>
+    <input type="email" id="login-email" placeholder="Email" />
+    <input type="password" id="login-password" placeholder="Password" />
+    <button id="login-btn">Login</button>
 
-    <!-- Auth section -->
-    <div id="auth-section">
-      <input type="email" id="email" placeholder="Email" />
-      <input type="password" id="password" placeholder="Password" />
-      <button onclick="login()">Login</button>
-      <button onclick="signup()">Sign Up</button>
-    </div>
+    <h3>Or Sign Up</h3>
+    <input type="email" id="signup-email" placeholder="Email" />
+    <input type="password" id="signup-password" placeholder="Password" />
+    <button id="signup-btn">Sign Up</button>
+  </div>
 
-    <!-- Main app -->
-    <div id="app-section" style="display:none;">
-      <p>Welcome! <button onclick="logout()">Log Out</button></p>
+  <div id="dashboard" style="display: none;">
+    <h2>Welcome!</h2>
+    <button id="logout-btn">Log Out</button>
 
-      <h2>Submit a Score</h2>
-      <select id="subject">
-        <option value="">Choose Subject</option>
-        <option value="Maths">Maths</option>
-        <option value="Biology">Biology</option>
-        <option value="Chemistry">Chemistry</option>
-        <option value="Physics">Physics</option>
-        <option value="English">English</option>
-        <option value="French">French</option>
-        <option value="German">German</option>
-        <option value="Italian">Italian</option>
-        <option value="Spanish">Spanish</option>
-        <option value="Latin">Latin</option>
-        <option value="Greek">Greek</option>
-        <option value="Classical Civilisation">Classical Civilisation</option>
-        <option value="Geography">Geography</option>
-        <option value="History">History</option>
-        <option value="Music">Music</option>
-        <option value="Sport Science">Sport Science</option>
-        <option value="Computer Science">Computer Science</option>
-        <option value="TP">TP</option>
-        <option value="Economics">Economics</option>
-      </select>
-      
-      <select id="year">
-        <option value="">Choose Year</option>
-        <option value="Ls 1">Ls 1</option>
-        <option value="Ls 2">Ls 2</option>
-        <option value="Removes">Removes</option>
-        <option value="Middles">Middles</option>
-        <option value="Fiths">Fiths</option>
-        <option value="Lower Sixth">Lower Sixth</option>
-        <option value="Upper Sixth">Upper Sixth</option>
-        
-      </select>
+    <h3>Submit a Test Score</h3>
+    <select id="subject">
+      <option value="">Choose Subject</option>
+      <option value="Maths">Maths</option>
+      <option value="Biology">Biology</option>
+      <option value="Chemistry">Chemistry</option>
+      <option value="Physics">Physics</option>
+      <option value="English">English</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Spanish">Spanish</option>
+      <option value="Latin">Latin</option>
+      <option value="Greek">Greek</option>
+      <option value="Classical Civilisation">Classical Civilisation</option>
+      <option value="Geography">Geography</option>
+      <option value="History">History</option>
+      <option value="Music">Music</option>
+      <option value="Sport Science">Sport Science</option>
+      <option value="Computer Science">Computer Science</option>
+      <option value="TP">TP</option>
+      <option value="Economics">Economics</option>
+    </select>
+    <input type="number" id="score" placeholder="Enter score (0–100)" />
+    <button id="submit-score">Submit Score</button>
 
-      <input type="number" id="score" placeholder="Enter test score (%)" />
-      <button onclick="submitScore()">Submit Score</button>
-
-      <h2>Your Progress</h2>
-      <div id="charts-container">
-        <canvas id="MathsChart"></canvas>
-        <canvas id="BiologyChart"></canvas>
-        <canvas id="ChemistryChart"></canvas>
-        <canvas id="PhysicsChart"></canvas>
-        <canvas id="EnglishChart"></canvas>
-        <canvas id="FrenchChart"></canvas>
-        <canvas id="GermanChart"></canvas>
-        <canvas id="ItalianChart"></canvas>
-        <canvas id="SpanishChart"></canvas>
-        <canvas id="LatinChart"></canvas>
-        <canvas id="GreekChart"></canvas>
-        <canvas id="Classical CivilisationChart"></canvas>
-        <canvas id="GeographyChart"></canvas>
-        <canvas id="HistoryChart"></canvas>
-        <canvas id="MusicChart"></canvas>
-        <canvas id="Sport ScienceChart"></canvas>
-        <canvas id="Computer ScienceChart"></canvas>
-        <canvas id="TPChart"></canvas>
-        <canvas id="EconomicsChart"></canvas>
-      </div>
+    <h3>Your Graphs</h3>
+    <div id="charts">
+      <canvas id="MathsChart"></canvas>
+      <canvas id="BiologyChart"></canvas>
+      <canvas id="ChemistryChart"></canvas>
+      <canvas id="PhysicsChart"></canvas>
+      <canvas id="EnglishChart"></canvas>
+      <canvas id="FrenchChart"></canvas>
+      <canvas id="GermanChart"></canvas>
+      <canvas id="ItalianChart"></canvas>
+      <canvas id="SpanishChart"></canvas>
+      <canvas id="LatinChart"></canvas>
+      <canvas id="GreekChart"></canvas>
+      <canvas id="Classical CivilisationChart"></canvas>
+      <canvas id="GeographyChart"></canvas>
+      <canvas id="HistoryChart"></canvas>
+      <canvas id="MusicChart"></canvas>
+      <canvas id="Sport ScienceChart"></canvas>
+      <canvas id="Computer ScienceChart"></canvas>
+      <canvas id="TPChart"></canvas>
+      <canvas id="EconomicsChart"></canvas>
     </div>
   </div>
 
-  <!-- Firebase config + app logic -->
-  <script>
-    // TODO: Replace with your Firebase project config:
-    const firebaseConfig = {
-      apiKey: "AIzaSyDWZ3NbTOaRoUjh7stKklyCiBDWH4mdRC0",
-      authDomain: "student-tests-f85fd.firebaseapp.com",
-      projectId: "student-tests-f85fd",
-      storageBucket: "student-tests-f85fd.firebasestorage.app",
-      messagingSenderId: "878760132447",
-      appId: "1:878760132447:web:fad870bd99112df6e0c0ea"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-  </script>
   <script src="script.js"></script>
 </body>
 </html>
