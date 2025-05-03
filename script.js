@@ -1,115 +1,158 @@
-let charts = {};
+// Initialize Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDWZ3NbTOaRoUjh7stKklyCiBDWH4mdRC0",
+  authDomain: "student-tests-f85fd.firebaseapp.com",
+  databaseURL: "https://student-tests-f85fd-default-rtdb.firebaseio.com",
+  projectId: "student-tests-f85fd",
+  storageBucket: "student-tests-f85fd.firebasestorage.app",
+  messagingSenderId: "878760132447",
+  appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
+};
+firebase.initializeApp(firebaseConfig);
 
-// Listen for auth state
+const auth = firebase.auth();
+const database = firebase.database();
+
+const subjects = [
+  "Maths", "Biology", "Chemistry", "Physics", "English", "French", "German",
+  "Italian", "Spanish", "Latin", "Greek", "Classical Civilisation",
+  "Geography", "History", "Music", "Sport Science", "Computer Science", "TP", "Economics"
+];
+
+let charts = {}; // Store Chart.js instances
+
 auth.onAuthStateChanged(user => {
   if (user) {
-    document.getElementById("auth-section").style.display = "none";
-    document.getElementById("app-section").style.display = "block";
+    document.getElementById("login").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
     fetchAndDisplayScoresRealtime();
   } else {
-    document.getElementById("auth-section").style.display = "block";
-    document.getElementById("app-section").style.display = "none";
+    document.getElementById("login").style.display = "block";
+    document.getElementById("dashboard").style.display = "none";
   }
 });
 
-function submitScore() {
+// Sign up
+document.getElementById("signup-btn").onclick = () => {
+  const email = document.getElementById("signup-email").value;
+  const password = document.getElementById("signup-password").value;
+  auth.createUserWithEmailAndPassword(email, password).catch(console.error);
+};
+
+// Log in
+document.getElementById("login-btn").onclick = () => {
+  const email = document.getElementById("login-email").value;
+  const password = document.getElementById("login-password").value;
+  auth.signInWithEmailAndPassword(email, password).catch(console.error);
+};
+
+// Log out
+document.getElementById("logout-btn").onclick = () => auth.signOut();
+
+// Submit a new score
+document.getElementById("submit-score").onclick = () => {
   const user = auth.currentUser;
   const subject = document.getElementById("subject").value;
   const score = parseFloat(document.getElementById("score").value);
 
   if (!user || !subject || isNaN(score)) {
-    alert("Please fill in all fields correctly.");
+    alert("Fill in all fields properly.");
     return;
   }
 
   const timestamp = Date.now();
+  const scoreData = { score, timestamp };
 
-  const scoreData = {
-    score,
-    timestamp
-  };
+  database.ref(`scores/${user.uid}/${subject}`).push(scoreData)
+    .then(() => {
+      document.getElementById("score").value = "";
+      fetchAndDisplayScoresRealtime();
+    })
+    .catch(console.error);
+};
 
-  const ref = firebase.database().ref(`scores/${user.uid}/${subject}`).push();
-  ref.set(scoreData).then(() => {
-    console.log("Score added to Realtime Database!");
-    fetchAndDisplayScoresRealtime(); // Reload data
-  }).catch(err => {
-    console.error("Error writing to database:", err);
-  });
-}
-
+// Fetch user scores and update graphs
 function fetchAndDisplayScoresRealtime() {
   const user = auth.currentUser;
   if (!user) return;
 
-  const subjects = ["Maths", "English", "Science"]; // Customize your subjects
-
   subjects.forEach(subject => {
-    const userRef = firebase.database().ref(`scores/${user.uid}/${subject}`);
-    const allRef = firebase.database().ref(`scores`);
+    const userRef = database.ref(`scores/${user.uid}/${subject}`);
+    const allRef = database.ref(`scores`);
 
-    // Fetch user data
     userRef.once("value", snapshot => {
-      const scores = [];
       const labels = [];
+      const userScores = [];
 
       snapshot.forEach(child => {
         const data = child.val();
-        const date = new Date(data.timestamp).toLocaleDateString();
-        scores.push(data.score);
-        labels.push(date);
+        userScores.push(data.score);
+        labels.push(new Date(data.timestamp).toLocaleDateString());
       });
 
-      // Fetch global average for the subject
-      allRef.once("value", allSnapshot => {
-        let total = 0, count = 0;
-
-        allSnapshot.forEach(userSnap => {
+      // Compute average across all users
+      let total = 0, count = 0;
+      allRef.once("value", allSnap => {
+        allSnap.forEach(userSnap => {
           const subjSnap = userSnap.child(subject);
           subjSnap.forEach(scoreSnap => {
-            const s = scoreSnap.val().score;
-            total += s;
+            const scoreVal = scoreSnap.val().score;
+            total += scoreVal;
             count++;
           });
         });
 
-        const average = count > 0 ? (total / count).toFixed(2) : null;
-        drawChart(subject, labels, scores, average);
+        const average = count ? (total / count) : 0;
+        const avgLine = Array(userScores.length).fill(average);
+
+        drawChart(subject, labels, userScores, avgLine);
       });
     });
   });
 }
 
-function drawChart(subject, labels, scores, average) {
-  const ctx = document.getElementById(`${subject}Chart`).getContext("2d");
+// Draw chart
+function drawChart(subject, labels, userData, avgData) {
+  const canvasId = `${subject}Chart`;
+  const ctx = document.getElementById(canvasId)?.getContext("2d");
+  if (!ctx) return;
 
-  if (charts[subject]) charts[subject].destroy();
+  // Destroy previous chart
+  if (charts[subject]) {
+    charts[subject].destroy();
+  }
 
   charts[subject] = new Chart(ctx, {
-    type: "line",
+    type: 'line',
     data: {
       labels: labels,
       datasets: [
         {
-          label: `${subject} Scores`,
-          data: scores,
-          borderColor: "#2196f3",
-          backgroundColor: "rgba(33, 150, 243, 0.2)",
-          fill: true,
-          tension: 0.3
+          label: `${subject} - Your Scores`,
+          data: userData,
+          borderColor: 'rgba(54, 162, 235, 1)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          fill: false,
+          tension: 0.2
         },
         {
-          label: "Average Score",
-          data: Array(scores.length).fill(parseFloat(average)),
-          borderColor: "#4caf50",
-          backgroundColor: "rgba(76, 175, 80, 0.2)",
-          fill: true,
-          tension: 0.3
+          label: `${subject} - Average`,
+          data: avgData,
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.2
         }
       ]
     },
     options: {
       responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: `${subject} Scores Over Time`
+        }
+      },
       scales: {
         y: {
           beginAtZero: true,
