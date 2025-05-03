@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Test Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="text-center mb-4">
+      <h1>Student Test Portal</h1>
+      <p class="text-muted">Track your test performance over time</p>
+    </div>
+
+    <div id="auth-section" class="card p-4 shadow-sm">
+      <div class="mb-3">
+        <input id="email" type="email" class="form-control" placeholder="Email">
+      </div>
+      <div class="mb-3">
+        <input id="password" type="password" class="form-control" placeholder="Password">
+      </div>
+      <div class="d-grid gap-2">
+        <button onclick="login()" class="btn btn-primary">Login</button>
+        <button onclick="signup()" class="btn btn-outline-secondary">Sign Up</button>
+      </div>
+    </div>
+
+    <div id="app-section" style="display:none;" class="mt-5">
+      <div class="card p-4 shadow-sm mb-4">
+        <h4>Submit Test Score</h4>
+        <div class="input-group mb-3">
+          <input id="score" type="number" class="form-control" placeholder="Score out of 100">
+          <button onclick="submitScore()" class="btn btn-success">Submit</button>
+        </div>
+        <button onclick="logout()" class="btn btn-sm btn-danger">Log Out</button>
+      </div>
+
+      <div class="card p-4 shadow-sm">
+        <h4>Your Score History</h4>
+        <canvas id="scoreChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
