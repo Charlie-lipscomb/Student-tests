@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Score Tracker</title>
+  <title>Student Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -11,63 +11,59 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div id="login">
-    <h2>Login</h2>
-    <input type="email" id="login-email" placeholder="Email" />
-    <input type="password" id="login-password" placeholder="Password" />
-    <button id="login-btn">Login</button>
+  <div class="container">
+    <h1>Student Dashboard</h1>
+    
+    <div id="auth">
+      <input type="email" id="email" placeholder="Email" />
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="signUp()">Sign Up</button>
+      <button onclick="login()">Login</button>
+    </div>
 
-    <h3>Or Sign Up</h3>
-    <input type="email" id="signup-email" placeholder="Email" />
-    <input type="password" id="signup-password" placeholder="Password" />
-    <button id="signup-btn">Sign Up</button>
-  </div>
+    <div id="dashboard" style="display: none;">
+      <p>Welcome, <span id="userEmail"></span></p>
+      <button onclick="logout()">Logout</button>
 
-  <div id="dashboard" style="display: none;">
-    <h2>Welcome!</h2>
-    <button id="logout-btn">Log Out</button>
+      <select id="year">
+        <option value="">Choose Year</option>
+        <option value="LS 1">LS 1</option>
+        <option value="LS 2">LS 2</option>
+        <option value="Removes">Removes</option>
+        <option value="Middles">Middles</option>
+        <option value="Fiths">Fiths</option>
+        <option value="Lower Sixth">Lower Sixth</option>
+        <option value="Upper Sixth">Upper Sixth</option>
+      </select>
 
-    <h3>Submit a Test Score</h3>
+      <select id="subject">
+        <option value="">Choose Subject</option>
+        <option value="Maths">Maths</option>
+        <option value="Biology">Biology</option>
+        <option value="Chemistry">Chemistry</option>
+        <option value="Physics">Physics</option>
+        <option value="English">English</option>
+        <option value="French">French</option>
+        <option value="German">German</option>
+        <option value="Italian">Italian</option>
+        <option value="Spanish">Spanish</option>
+        <option value="Latin">Latin</option>
+        <option value="Greek">Greek</option>
+        <option value="Classical Civilisation">Classical Civilisation</option>
+        <option value="Geography">Geography</option>
+        <option value="History">History</option>
+        <option value="Music">Music</option>
+        <option value="Sport Science">Sport Science</option>
+        <option value="Computer Science">Computer Science</option>
+        <option value="TP">TP</option>
+        <option value="Economics">Economics</option>
+      </select>
 
-    <select id="year">
-      <option value="">Choose Year</option>
-      <option value="Year 7">Year 7</option>
-      <option value="Year 8">Year 8</option>
-      <option value="Year 9">Year 9</option>
-      <option value="Year 10">Year 10</option>
-      <option value="Year 11">Year 11</option>
-      <option value="Year 12">Year 12</option>
-      <option value="Year 13">Year 13</option>
-    </select>
+      <input type="number" id="score" placeholder="Score" />
+      <button onclick="submitScore()">Submit Score</button>
 
-    <select id="subject">
-      <option value="">Choose Subject</option>
-      <option value="Maths">Maths</option>
-      <option value="Biology">Biology</option>
-      <option value="Chemistry">Chemistry</option>
-      <option value="Physics">Physics</option>
-      <option value="English">English</option>
-      <option value="French">French</option>
-      <option value="German">German</option>
-      <option value="Italian">Italian</option>
-      <option value="Spanish">Spanish</option>
-      <option value="Latin">Latin</option>
-      <option value="Greek">Greek</option>
-      <option value="Classical Civilisation">Classical Civilisation</option>
-      <option value="Geography">Geography</option>
-      <option value="History">History</option>
-      <option value="Music">Music</option>
-      <option value="Sport Science">Sport Science</option>
-      <option value="Computer Science">Computer Science</option>
-      <option value="TP">TP</option>
-      <option value="Economics">Economics</option>
-    </select>
-
-    <input type="number" id="score" placeholder="Enter score (0–100)" />
-    <button id="submit-score">Submit Score</button>
-
-    <h3>Your Graphs</h3>
-    <div id="charts"></div>
+      <canvas id="scoreChart" width="400" height="200"></canvas>
+    </div>
   </div>
 
   <script src="script.js"></script>
