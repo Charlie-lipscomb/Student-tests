@@ -9,34 +9,42 @@ const firebaseConfig = {
   appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
 };
 
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const authContainer = document.getElementById('auth-container');
-const dashboard = document.getElementById('dashboard');
-const chartsContainer = document.getElementById('charts-container');
+const loginDiv = document.getElementById("login");
+const dashboardDiv = document.getElementById("dashboard");
+const chartsContainer = document.getElementById("charts");
 
-function login() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  auth.signInWithEmailAndPassword(email, password)
-    .then(() => showDashboard())
-    .catch(e => document.getElementById('auth-message').innerText = e.message);
-}
+auth.onAuthStateChanged(user => {
+  if (user) {
+    loginDiv.style.display = "none";
+    dashboardDiv.style.display = "block";
+    loadGraphs();
+  } else {
+    loginDiv.style.display = "block";
+    dashboardDiv.style.display = "none";
+  }
+});
 
-function signup() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+function signUp() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
   auth.createUserWithEmailAndPassword(email, password)
-    .then(() => showDashboard())
-    .catch(e => document.getElementById('auth-message').innerText = e.message);
+    .catch(error => alert(error.message));
 }
 
-function showDashboard() {
-  authContainer.style.display = 'none';
-  dashboard.style.display = 'block';
-  loadGraphs();
+function signIn() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(error => alert(error.message));
+}
+
+function signOut() {
+  auth.signOut();
 }
 
 function submitScore() {
@@ -45,10 +53,25 @@ function submitScore() {
   const score = parseFloat(document.getElementById('score').value);
   const user = auth.currentUser;
 
-  if (user && year && subject && !isNaN(score)) {
-    const ref = db.ref(`results/${year}/${subject}`);
-    ref.push({ uid: user.uid, score: score }).then(loadGraphs);
+  if (!year || !subject || isNaN(score)) {
+    alert("Please fill in all fields correctly.");
+    return;
   }
+
+  const personalRef = db.ref(`userScores/${user.uid}/${year}/${subject}`);
+  const sharedRef = db.ref(`results/${year}/${subject}`);
+
+  const newEntry = {
+    score: score,
+    timestamp: Date.now(),
+    uid: user.uid
+  };
+
+  personalRef.push(newEntry);
+  sharedRef.push({ score: score });
+
+  document.getElementById('score').value = '';
+  loadGraphs(); // Refresh graphs
 }
 
 function loadGraphs() {
@@ -65,25 +88,23 @@ function loadGraphs() {
   const userId = auth.currentUser.uid;
 
   subjects.forEach(subject => {
-    const ref = db.ref(`results/${year}/${subject}`);
-    ref.once('value', snapshot => {
-      const data = snapshot.val();
-      if (!data) return;
+    const personalRef = db.ref(`userScores/${userId}/${year}/${subject}`);
+    const sharedRef = db.ref(`results/${year}/${subject}`);
 
-      const userScores = [];
-      const allScores = [];
+    Promise.all([
+      personalRef.once('value'),
+      sharedRef.once('value')
+    ]).then(([userSnap, avgSnap]) => {
+      const userData = userSnap.val();
+      const allData = avgSnap.val();
 
-      Object.values(data).forEach(entry => {
-        allScores.push(entry.score);
-        if (entry.uid === userId) {
-          userScores.push(entry.score);
-        }
-      });
+      if (!userData) return;
 
-      if (userScores.length === 0) return; // Skip if user has no data
-
+      const userScores = Object.values(userData).map(entry => entry.score);
       const labels = userScores.map((_, i) => `Test ${i + 1}`);
-      const average = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+
+      const avgScores = allData ? Object.values(allData).map(e => e.score) : [];
+      const average = avgScores.length > 0 ? avgScores.reduce((a, b) => a + b, 0) / avgScores.length : 0;
       const avgLine = new Array(userScores.length).fill(average);
 
       const canvas = document.createElement('canvas');
@@ -124,7 +145,3 @@ function loadGraphs() {
     });
   });
 }
-
-auth.onAuthStateChanged(user => {
-  if (user) showDashboard();
-});
