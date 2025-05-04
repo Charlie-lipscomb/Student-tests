@@ -2,27 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Test Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Student Test Tracker</h1>
+  <div id="auth-container">
+    <h2>Sign In / Sign Up</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <button onclick="signup()">Sign Up</button>
+    <p id="auth-message"></p>
+  </div>
 
-    <div id="auth">
-      <input type="email" id="email" placeholder="Email" />
-      <input type="password" id="password" placeholder="Password" />
-      <button onclick="signUp()">Sign Up</button>
-      <button onclick="signIn()">Sign In</button>
-      <button onclick="signOut()">Sign Out</button>
-    </div>
-
-    <div id="form-section" style="display: none;">
+  <div id="dashboard" style="display: none;">
+    <h2>Submit Test Result</h2>
+    <label>Year:
       <select id="year">
         <option value="">Choose Year</option>
         <option value="Year 7">Year 7</option>
@@ -31,7 +31,8 @@
         <option value="Year 10">Year 10</option>
         <option value="Year 11">Year 11</option>
       </select>
-
+    </label>
+    <label>Subject:
       <select id="subject">
         <option value="">Choose Subject</option>
         <option value="Maths">Maths</option>
@@ -54,12 +55,12 @@
         <option value="TP">TP</option>
         <option value="Economics">Economics</option>
       </select>
+    </label>
+    <input type="number" id="score" placeholder="Enter your score" />
+    <button onclick="submitScore()">Submit Score</button>
 
-      <input type="number" id="score" placeholder="Score (e.g. 75)" />
-      <button onclick="submitScore()">Submit Score</button>
-    </div>
-
-    <div id="graphs"></div>
+    <h3>Charts</h3>
+    <div id="charts-container"></div>
   </div>
 
   <script src="script.js"></script>
