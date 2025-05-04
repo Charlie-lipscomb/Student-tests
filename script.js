@@ -9,60 +9,52 @@ const firebaseConfig = {
   appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
 };
 
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser = null;
+const authContainer = document.getElementById('auth-container');
+const dashboard = document.getElementById('dashboard');
+const chartsContainer = document.getElementById('charts-container');
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    currentUser = user;
-    document.getElementById('form-section').style.display = 'block';
-    loadGraphs();
-  } else {
-    currentUser = null;
-    document.getElementById('form-section').style.display = 'none';
-    document.getElementById('graphs').innerHTML = '';
-  }
-});
-
-function signUp() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(email, password).catch(alert);
+function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => showDashboard())
+    .catch(e => document.getElementById('auth-message').innerText = e.message);
 }
 
-function signIn() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(email, password).catch(alert);
+function signup() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(() => showDashboard())
+    .catch(e => document.getElementById('auth-message').innerText = e.message);
 }
 
-function signOut() {
-  auth.signOut();
+function showDashboard() {
+  authContainer.style.display = 'none';
+  dashboard.style.display = 'block';
+  loadGraphs();
 }
 
 function submitScore() {
-  const subject = document.getElementById("subject").value;
-  const year = document.getElementById("year").value;
-  const score = parseInt(document.getElementById("score").value);
+  const year = document.getElementById('year').value;
+  const subject = document.getElementById('subject').value;
+  const score = parseFloat(document.getElementById('score').value);
+  const user = auth.currentUser;
 
-  if (!subject || !year || isNaN(score)) return alert("Fill all fields");
-
-  const ref = db.ref(`scores/${year}/${subject}/${currentUser.uid}`);
-  ref.push(score).then(() => {
-    loadGraphs();
-  });
+  if (user && year && subject && !isNaN(score)) {
+    const ref = db.ref(`results/${year}/${subject}`);
+    ref.push({ uid: user.uid, score: score }).then(loadGraphs);
+  }
 }
 
 function loadGraphs() {
-  const year = document.getElementById("year").value;
+  const year = document.getElementById('year').value;
+  chartsContainer.innerHTML = '';
   if (!year) return;
-
-  const container = document.getElementById("graphs");
-  container.innerHTML = "";
 
   const subjects = [
     "Maths", "Biology", "Chemistry", "Physics", "English", "French", "German",
@@ -70,62 +62,71 @@ function loadGraphs() {
     "Geography", "History", "Music", "Sport Science", "Computer Science", "TP", "Economics"
   ];
 
+  const userId = auth.currentUser.uid;
+
   subjects.forEach(subject => {
-    db.ref(`scores/${year}/${subject}`).once("value", snapshot => {
+    const ref = db.ref(`results/${year}/${subject}`);
+    ref.once('value', snapshot => {
       const data = snapshot.val();
       if (!data) return;
 
-      let userScores = [];
-      let allScores = [];
+      const labels = [];
+      const userScores = [];
+      const allScores = [];
 
-      for (const uid in data) {
-        for (const scoreId in data[uid]) {
-          const score = data[uid][scoreId];
-          allScores.push(score);
-          if (uid === currentUser.uid) {
-            userScores.push(score);
-          }
+      let userIndex = 0;
+      let globalIndex = 0;
+
+      Object.values(data).forEach(entry => {
+        allScores.push(entry.score);
+        if (entry.uid === userId) {
+          labels.push("Test " + (++userIndex));
+          userScores.push(entry.score);
         }
-      }
+      });
 
-      if (userScores.length > 0) {
-        const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+      const average = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+      const avgLine = new Array(userScores.length).fill(average);
 
-        const canvas = document.createElement("canvas");
-        container.appendChild(document.createElement("h3")).textContent = subject;
-        container.appendChild(canvas);
+      const canvas = document.createElement('canvas');
+      chartsContainer.appendChild(document.createElement('h4')).innerText = `${subject} - ${year}`;
+      chartsContainer.appendChild(canvas);
 
-        new Chart(canvas, {
-          type: "line",
-          data: {
-            labels: userScores.map((_, i) => `Test ${i + 1}`),
-            datasets: [
-              {
-                label: "Your Scores",
-                data: userScores,
-                borderColor: "blue",
-                fill: false
-              },
-              {
-                label: "Average Score",
-                data: new Array(userScores.length).fill(avg),
-                borderColor: "red",
-                borderDash: [5, 5],
-                fill: false
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                beginAtZero: true
-              }
+      new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Your Scores',
+              data: userScores,
+              borderColor: 'blue',
+              fill: false
+            },
+            {
+              label: 'Average Score',
+              data: avgLine,
+              borderColor: 'orange',
+              borderDash: [5, 5],
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true },
+            title: {
+              display: true,
+              text: `${subject} Scores`
             }
           }
-        });
-      }
+        }
+      });
     });
   });
 }
+
+auth.onAuthStateChanged(user => {
+  if (user) showDashboard();
+});
