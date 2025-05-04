@@ -63,6 +63,7 @@ function loadGraphs() {
     const data = snapshot.val();
     const grouped = {};
 
+    // Group data by subject-year
     for (let id in data) {
       const { year, subject, score } = data[id];
       const key = year + " - " + subject;
@@ -71,7 +72,7 @@ function loadGraphs() {
     }
 
     const chartsDiv = document.getElementById("charts");
-    chartsDiv.innerHTML = "";
+    chartsDiv.innerHTML = ""; // Clear all existing charts
 
     Object.keys(grouped).forEach((key) => {
       const [year, subject] = key.split(" - ");
