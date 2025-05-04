@@ -1,4 +1,21 @@
 
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getDatabase,
+  ref,
+  set,
+  push,
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDWZ3NbTOaRoUjh7stKklyCiBDWH4mdRC0",
   authDomain: "student-tests-f85fd.firebaseapp.com",
@@ -9,114 +26,148 @@ const firebaseConfig = {
   appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
 };
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getDatabase(app);
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-
-const authSection = document.getElementById("auth-section");
+const loginForm = document.getElementById("login-form");
+const signupForm = document.getElementById("signup-form");
 const dashboard = document.getElementById("dashboard");
-const chartsContainer = document.getElementById("charts-container");
+const logoutBtn = document.getElementById("logout");
+const submitScoreBtn = document.getElementById("submit-score");
 
-function signUp() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(email, password)
-    .then(() => document.getElementById("auth-status").textContent = "Signed up!")
-    .catch(err => document.getElementById("auth-status").textContent = err.message);
-}
+const subjectSelect = document.getElementById("subject");
+const yearSelect = document.getElementById("year");
+const scoreInput = document.getElementById("score");
+const graphsContainer = document.getElementById("graphs");
 
-function signIn() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(email, password)
+signupForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const email = signupForm["signup-email"].value;
+  const password = signupForm["signup-password"].value;
+
+  createUserWithEmailAndPassword(auth, email, password)
     .then(() => {
-      document.getElementById("auth-status").textContent = "Logged in!";
+      signupForm.reset();
     })
-    .catch(err => document.getElementById("auth-status").textContent = err.message);
-}
+    .catch((err) => alert(err.message));
+});
 
-function signOut() {
-  auth.signOut().then(() => location.reload());
-}
+loginForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const email = loginForm["login-email"].value;
+  const password = loginForm["login-password"].value;
 
-auth.onAuthStateChanged(user => {
+  signInWithEmailAndPassword(auth, email, password)
+    .then(() => {
+      loginForm.reset();
+    })
+    .catch((err) => alert(err.message));
+});
+
+logoutBtn.addEventListener("click", () => {
+  signOut(auth);
+});
+
+onAuthStateChanged(auth, (user) => {
   if (user) {
-    authSection.style.display = "none";
+    document.getElementById("auth").style.display = "none";
     dashboard.style.display = "block";
-    loadUserData(user.uid);
+    loadGraphs(user.uid);
   } else {
-    authSection.style.display = "block";
+    document.getElementById("auth").style.display = "block";
     dashboard.style.display = "none";
   }
 });
 
-function submitResult() {
-  const year = document.getElementById("year").value;
-  const subject = document.getElementById("subject").value;
-  const score = parseFloat(document.getElementById("score").value);
+submitScoreBtn.addEventListener("click", () => {
+  const subject = subjectSelect.value.trim();
+  const year = yearSelect.value.trim();
+  const score = parseFloat(scoreInput.value);
   const user = auth.currentUser;
 
-  if (!year || !subject || isNaN(score) || !user) return;
+  if (!subject || !year || isNaN(score)) {
+    alert("Please select subject, year, and enter a score.");
+    return;
+  }
 
-  const resultRef = db.ref(`results/${user.uid}/${subject}_${year}`).push();
-  resultRef.set({
-    score,
+  const subjectYear = `${subject}_${year}`;
+  const userRef = ref(db, `results/${user.uid}/${subjectYear}`);
+  const allRef = ref(db, `allResults/${subjectYear}`);
+
+  const newResult = {
+    score: score,
     timestamp: Date.now()
-  });
+  };
 
-  // Also store for global average
-  const avgRef = db.ref(`allResults/${subject}_${year}`).push();
-  avgRef.set({
-    score,
-    timestamp: Date.now()
-  });
-}
+  push(userRef, newResult);
+  push(allRef, newResult);
 
-function loadUserData(uid) {
-  chartsContainer.innerHTML = "";
+  scoreInput.value = "";
+  loadGraphs(user.uid);
+});
 
-  db.ref(`results/${uid}`).on("value", snapshot => {
-    chartsContainer.innerHTML = "";
+function loadGraphs(userId) {
+  graphsContainer.innerHTML = "";
 
-    const data = snapshot.val();
-    if (!data) return;
+  const userResultsRef = ref(db, `results/${userId}`);
+  onValue(userResultsRef, (snapshot) => {
+    graphsContainer.innerHTML = "";
+    const userData = snapshot.val();
+    if (!userData) return;
 
-    Object.keys(data).forEach(subjectYear => {
-      const scores = [];
+    Object.entries(userData).forEach(([subjectYear, entries]) => {
+      const [subject, year] = subjectYear.split("_");
+
       const labels = [];
-      Object.values(data[subjectYear]).forEach((entry, i) => {
+      const scores = [];
+
+      Object.values(entries).forEach((entry) => {
+        labels.push(new Date(entry.timestamp).toLocaleDateString());
         scores.push(entry.score);
-        labels.push(`Test ${i + 1}`);
       });
 
-      // Create chart canvas
+      const graphContainer = document.createElement("div");
+      graphContainer.classList.add("graph-block");
+
+      const title = document.createElement("h3");
+      title.textContent = `${subject} - ${year}`;
+      graphContainer.appendChild(title);
+
       const canvas = document.createElement("canvas");
-      chartsContainer.appendChild(document.createElement("hr"));
-      chartsContainer.appendChild(document.createTextNode(subjectYear));
-      chartsContainer.appendChild(canvas);
+      graphContainer.appendChild(canvas);
 
-      // Fetch average
-      db.ref(`allResults/${subjectYear}`).once("value", avgSnap => {
-        const allScores = Object.values(avgSnap.val() || {}).map(d => d.score);
-        const avg = allScores.reduce((a, b) => a + b, 0) / (allScores.length || 1);
-        const avgLine = Array(scores.length).fill(avg);
+      graphsContainer.appendChild(graphContainer);
 
-        new Chart(canvas.getContext("2d"), {
-          type: 'line',
+      // Fetch global average
+      const allResultsRef = ref(db, `allResults/${subjectYear}`);
+      onValue(allResultsRef, (avgSnap) => {
+        const allScores = [];
+        Object.values(avgSnap.val() || {}).forEach((entry) => {
+          allScores.push(entry.score);
+        });
+
+        const average = allScores.length > 0
+          ? allScores.reduce((a, b) => a + b, 0) / allScores.length
+          : 0;
+
+        const averageData = Array(scores.length).fill(average);
+
+        new Chart(canvas, {
+          type: "line",
           data: {
-            labels: labels,
+            labels,
             datasets: [
               {
                 label: "Your Scores",
                 data: scores,
-                borderColor: "blue",
+                borderColor: "#007bff",
                 fill: false
               },
               {
                 label: "Average Score",
-                data: avgLine,
-                borderColor: "red",
+                data: averageData,
+                borderColor: "#ff9900",
                 borderDash: [5, 5],
                 fill: false
               }
@@ -124,13 +175,7 @@ function loadUserData(uid) {
           },
           options: {
             responsive: true,
-            plugins: {
-              legend: { position: 'top' },
-              title: {
-                display: true,
-                text: `Subject: ${subjectYear}`
-              }
-            }
+            maintainAspectRatio: false
           }
         });
       });
