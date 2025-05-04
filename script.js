@@ -1,19 +1,3 @@
-// Firebase Config (replace with your actual config)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
-import {
-  getDatabase,
-  ref,
-  push,
-  set,
-  onValue,
-} from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDWZ3NbTOaRoUjh7stKklyCiBDWH4mdRC0",
@@ -27,120 +11,77 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const database = firebase.database();
+const db = firebase.database();
 
-// DOM Elements
-const authSection = document.getElementById("auth");
-const dashboard = document.getElementById("dashboard");
-const loginForm = document.getElementById("login-form");
-const signupForm = document.getElementById("signup-form");
-const logoutButton = document.getElementById("logout");
-const subjectInput = document.getElementById("subject");
-const yearInput = document.getElementById("year");
-const scoreInput = document.getElementById("score");
-const submitScoreBtn = document.getElementById("submit-score");
-const graphsContainer = document.getElementById("graphs");
+function signUp() {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("password").value;
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(() => {
+      document.getElementById("auth-container").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      loadGraphs();
+    })
+    .catch((e) => alert(e.message));
+}
 
-let currentUser = null;
-const charts = {}; // Track charts per subject-year
+function signIn() {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("password").value;
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(() => {
+      document.getElementById("auth-container").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      loadGraphs();
+    })
+    .catch((e) => alert(e.message));
+}
 
-// Auth Handlers
-signupForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = document.getElementById("signup-email").value;
-  const password = document.getElementById("signup-password").value;
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-  } catch (error) {
-    alert(error.message);
-  }
-});
+function submitScore() {
+  const year = document.getElementById("year").value;
+  const subject = document.getElementById("subject").value;
+  const score = parseFloat(document.getElementById("score").value);
 
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = document.getElementById("login-email").value;
-  const password = document.getElementById("login-password").value;
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (error) {
-    alert(error.message);
-  }
-});
+  if (!year || !subject || isNaN(score)) return alert("Fill all fields!");
 
-logoutButton.addEventListener("click", () => {
-  signOut(auth);
-});
+  const uid = auth.currentUser.uid;
+  const newResultKey = db.ref().child("results").push().key;
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentUser = user;
-    authSection.style.display = "none";
-    dashboard.style.display = "block";
-    loadAllGraphs();
-  } else {
-    currentUser = null;
-    authSection.style.display = "block";
-    dashboard.style.display = "none";
-  }
-});
-
-// Submit Score
-submitScoreBtn.addEventListener("click", () => {
-  const subject = subjectInput.value;
-  const year = yearInput.value;
-  const score = parseFloat(scoreInput.value);
-
-  if (!subject || !year || isNaN(score) || !currentUser) return;
-
-  const entryRef = push(
-    ref(db, `scores/${subject}/${year}`)
-  );
-  set(entryRef, {
-    uid: currentUser.uid,
+  db.ref("users/" + uid + "/results/" + newResultKey).set({
+    year,
+    subject,
     score,
-    timestamp: Date.now(),
+    timestamp: Date.now()
+  }).then(() => {
+    loadGraphs();
   });
+}
 
-  scoreInput.value = "";
-});
+function loadGraphs() {
+  const uid = auth.currentUser.uid;
+  db.ref("users/" + uid + "/results").once("value", (snapshot) => {
+    const data = snapshot.val();
+    const grouped = {};
 
-// Load Graphs
-function loadAllGraphs() {
-  graphsContainer.innerHTML = "";
+    for (let id in data) {
+      const { year, subject, score } = data[id];
+      const key = year + " - " + subject;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push({ score, timestamp: data[id].timestamp });
+    }
 
-  const subjects = [
-    "Maths", "Biology", "Chemistry", "Physics", "English", "French", "German",
-    "Italian", "Spanish", "Latin", "Greek", "Classical Civilisation",
-    "Geography", "History", "Music", "Sport Science", "Computer Science",
-    "TP", "Economics"
-  ];
+    const chartsDiv = document.getElementById("charts");
+    chartsDiv.innerHTML = "";
 
-  const years = ["7", "8", "9", "10", "11", "12", "13"];
+    Object.keys(grouped).forEach((key) => {
+      const [year, subject] = key.split(" - ");
+      const scores = grouped[key].sort((a, b) => a.timestamp - b.timestamp).map(e => e.score);
+      const labels = scores.map((_, i) => `Test ${i + 1}`);
 
-  subjects.forEach((subject) => {
-    years.forEach((year) => {
-      const key = `${subject}-${year}`;
-      const dataRef = ref(db, `scores/${subject}/${year}`);
-      onValue(dataRef, (snapshot) => {
-        const data = snapshot.val();
-        if (!data) return;
-
-        const userScores = [];
-        const userLabels = [];
-        const allScores = [];
-
-        Object.values(data).forEach((entry, index) => {
-          allScores.push(entry.score);
-          if (entry.uid === currentUser.uid) {
-            userScores.push(entry.score);
-            userLabels.push(`Test ${userScores.length}`);
-          }
-        });
-
-        // Calculate average across ALL users for this subject and year
+      // Average across all users for this subject + year
+      db.ref("users").once("value", (usersSnap) => {
         let allScores = [];
-        snapshot.forEach((userSnap) => {
-
+        usersSnap.forEach((userSnap) => {
           const userData = userSnap.val();
           if (userData.results) {
             Object.values(userData.results).forEach((test) => {
@@ -148,67 +89,43 @@ function loadAllGraphs() {
                 allScores.push(parseFloat(test.score));
               }
             });
-          });
+          }
+        });
 
-        const averageScore = allScores.length > 0
+        const average = allScores.length > 0
           ? allScores.reduce((a, b) => a + b, 0) / allScores.length
           : 0;
-        // Create a flat line to match the number of user's test scores
-        const averageScores = Array(userScores.length).fill(averageScore);
 
-        // Update or create chart
-        if (charts[key]) {
-          charts[key].data.labels = userLabels;
-          charts[key].data.datasets[0].data = userScores;
-          charts[key].data.datasets[1].data = averageScores;
-          charts[key].update();
-        } else if (userScores.length > 0) {
-          const section = document.createElement("div");
-          section.className = "graph-section";
-          const title = document.createElement("h4");
-          title.textContent = `${subject} - Year ${year}`;
-          const canvas = document.createElement("canvas");
-          section.appendChild(title);
-          section.appendChild(canvas);
-          graphsContainer.appendChild(section);
-          const ctx = canvas.getContext("2d");
-          charts[key] = new Chart(ctx, {
-            type: "line",
-            data: {
-              labels: userLabels,
-              datasets: [
-                {
-                  label: "Your Scores",
-                  data: userScores,
-                  borderColor: "blue",
-                  fill: false,
-                },
-                {
-                  label: "Average Score",
-                  data: averageScores,
-                  borderColor: "red",
-                  borderDash: [5, 5],
-                  fill: false,
-                },
-              ],
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                title: {
-                  display: true,
-                  text: `${subject} - Year ${year}`,
-                },
+        const averageLine = Array(scores.length).fill(average);
+
+        const canvas = document.createElement("canvas");
+        chartsDiv.appendChild(canvas);
+        new Chart(canvas.getContext("2d"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: key + " - Your Scores",
+                data: scores,
+                borderColor: "blue",
+                fill: false
               },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  max: 100,
-                },
-              },
-            },
-          });
-        }
+              {
+                label: "Average",
+                data: averageLine,
+                borderColor: "red",
+                borderDash: [5, 5],
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            height: 300
+          }
+        });
       });
     });
   });
