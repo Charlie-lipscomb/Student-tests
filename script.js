@@ -1,128 +1,149 @@
-// Initialize Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyDWZ3NbTOaRoUjh7stKklyCiBDWH4mdRC0",
-  authDomain: "student-tests-f85fd.firebaseapp.com",
-  databaseURL: "https://student-tests-f85fd-default-rtdb.firebaseio.com",
-  projectId: "student-tests-f85fd",
-  storageBucket: "student-tests-f85fd.firebasestorage.app",
-  messagingSenderId: "878760132447",
-  appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
-};
 
+// Firebase config - replace with your own!
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID"
+};
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-let currentUser = null;
-let chart = null;
+let chart;
 
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(user => {
   if (user) {
-    currentUser = user;
-    document.getElementById("auth").style.display = "none";
+    document.getElementById("auth-section").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
-    document.getElementById("userEmail").innerText = user.email;
+    document.getElementById("userEmail").textContent = user.email;
     updateChart();
   } else {
-    currentUser = null;
-    document.getElementById("auth").style.display = "block";
+    document.getElementById("auth-section").style.display = "block";
     document.getElementById("dashboard").style.display = "none";
   }
 });
 
 function signUp() {
   const email = document.getElementById("email").value;
-  const pass = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(email, pass).catch(alert);
+  const password = document.getElementById("password").value;
+  auth.createUserWithEmailAndPassword(email, password).catch(alert);
 }
 
-function login() {
+function logIn() {
   const email = document.getElementById("email").value;
-  const pass = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(email, pass).catch(alert);
+  const password = document.getElementById("password").value;
+  auth.signInWithEmailAndPassword(email, password).catch(alert);
 }
 
-function logout() {
+function logOut() {
   auth.signOut();
 }
 
 function submitScore() {
-  const subject = document.getElementById("subject").value;
+  const user = auth.currentUser;
   const year = document.getElementById("year").value;
-  const score = parseFloat(document.getElementById("score").value);
+  const subject = document.getElementById("subject").value;
+  const score = parseInt(document.getElementById("score").value);
 
-  if (!subject || !year || isNaN(score)) {
-    alert("Please complete all fields.");
-    return;
-  }
+  if (!user || !year || !subject || isNaN(score)) return alert("Complete all fields");
 
-  const userId = currentUser.uid;
-  const timestamp = Date.now();
-
-  db.ref(`scores/${userId}/${subject}/${timestamp}`).set({
-    score,
-    year
-  }).then(updateChart);
+  const path = `scores/${subject}/${user.uid}`;
+  db.ref(path).push({ score, timestamp: Date.now(), year }).then(updateChart);
 }
 
 function updateChart() {
+  const user = auth.currentUser;
   const subject = document.getElementById("subject").value;
-  if (!subject || !currentUser) return;
+  if (!user || !subject) return;
 
-  const userId = currentUser.uid;
+  const subjectRef = db.ref(`scores/${subject}`);
 
-  db.ref("scores").once("value").then((snapshot) => {
-    const allData = snapshot.val();
+  subjectRef.once("value", snapshot => {
+    const data = snapshot.val();
     const userScores = [];
-    const allScores = [];
+    const averageScores = [];
 
-    for (let uid in allData) {
-      if (allData[uid][subject]) {
-        for (let ts in allData[uid][subject]) {
-          const entry = allData[uid][subject][ts];
-          if (uid === userId) userScores.push(entry.score);
-          allScores.push(entry.score);
+    const timestamps = [];
+
+    if (data) {
+      let allScoresByTimestamp = {};
+      for (let uid in data) {
+        for (let key in data[uid]) {
+          const entry = data[uid][key];
+          if (!allScoresByTimestamp[entry.timestamp]) {
+            allScoresByTimestamp[entry.timestamp] = [];
+          }
+          allScoresByTimestamp[entry.timestamp].push(entry.score);
+
+          if (uid === user.uid) {
+            userScores.push({ x: entry.timestamp, y: entry.score });
+          }
         }
       }
+
+      for (let ts in allScoresByTimestamp) {
+        const scores = allScoresByTimestamp[ts];
+        const avg = scores.reduce((a, b) => a + b) / scores.length;
+        averageScores.push({ x: parseInt(ts), y: avg });
+        timestamps.push(parseInt(ts));
+      }
+
+      // Sort by timestamp
+      userScores.sort((a, b) => a.x - b.x);
+      averageScores.sort((a, b) => a.x - b.x);
     }
 
-    renderChart(userScores, allScores, subject);
+    if (chart) chart.destroy();
+
+    const ctx = document.getElementById("scoreChart").getContext("2d");
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        datasets: [
+          {
+            label: "Your Scores",
+            data: userScores,
+            borderColor: "#00aaff",
+            fill: false,
+          },
+          {
+            label: "Class Average",
+            data: averageScores,
+            borderColor: "#ff6600",
+            fill: false,
+          }
+        ]
+      },
+      options: {
+        scales: {
+          x: {
+            type: "time",
+            time: {
+              unit: "day"
+            },
+            title: {
+              display: true,
+              text: "Date"
+            }
+          },
+          y: {
+            beginAtZero: true,
+            max: 100,
+            title: {
+              display: true,
+              text: "Score"
+            }
+          }
+        }
+      }
+    });
   });
 }
 
-function renderChart(userData, avgData, subject) {
-  if (chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("scoreChart").getContext("2d"), {
-    type: "line",
-    data: {
-      labels: userData.map((_, i) => `Test ${i + 1}`),
-      datasets: [
-        {
-          label: "Your Scores",
-          data: userData,
-          borderColor: "blue",
-          fill: false
-        },
-        {
-          label: "Class Average",
-          data: Array(userData.length).fill(
-            avgData.reduce((a, b) => a + b, 0) / (avgData.length || 1)
-          ),
-          borderColor: "orange",
-          fill: false
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        title: {
-          display: true,
-          text: `Scores for ${subject}`
-        }
-      }
-    }
-  });
-}
+// Re-render chart when subject changes
+document.getElementById("subject").addEventListener("change", updateChart);
