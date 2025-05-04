@@ -70,21 +70,19 @@ function loadGraphs() {
       const data = snapshot.val();
       if (!data) return;
 
-      const labels = [];
       const userScores = [];
       const allScores = [];
-
-      let userIndex = 0;
-      let globalIndex = 0;
 
       Object.values(data).forEach(entry => {
         allScores.push(entry.score);
         if (entry.uid === userId) {
-          labels.push("Test " + (++userIndex));
           userScores.push(entry.score);
         }
       });
 
+      if (userScores.length === 0) return; // Skip if user has no data
+
+      const labels = userScores.map((_, i) => `Test ${i + 1}`);
       const average = allScores.reduce((a, b) => a + b, 0) / allScores.length;
       const avgLine = new Array(userScores.length).fill(average);
 
@@ -118,7 +116,7 @@ function loadGraphs() {
             legend: { display: true },
             title: {
               display: true,
-              text: `${subject} Scores`
+              text: `${subject} (${year})`
             }
           }
         }
