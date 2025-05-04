@@ -1,50 +1,106 @@
-<h2>Submit Test Score</h2>
-<div class="form-group">
-  <label for="year">Year:</label>
-  <select id="year">
-    <option value="">Choose Year</option>
-    <option value="Year 7">Year 7</option>
-    <option value="Year 8">Year 8</option>
-    <option value="Year 9">Year 9</option>
-    <option value="Year 10">Year 10</option>
-    <option value="Year 11">Year 11</option>
-    <option value="Year 12">Year 12</option>
-    <option value="Year 13">Year 13</option>
-  </select>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h2 {
+      color: #0056b3;
+      margin-top: 30px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    select, input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    canvas {
+      margin-top: 30px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h2>Submit Your Score</h2>
 
-<div class="form-group">
-  <label for="subject">Subject:</label>
-  <select id="subject">
-    <option value="">Choose Subject</option>
-    <option value="Maths">Maths</option>
-    <option value="Biology">Biology</option>
-    <option value="Chemistry">Chemistry</option>
-    <option value="Physics">Physics</option>
-    <option value="English">English</option>
-    <option value="French">French</option>
-    <option value="German">German</option>
-    <option value="Italian">Italian</option>
-    <option value="Spanish">Spanish</option>
-    <option value="Latin">Latin</option>
-    <option value="Greek">Greek</option>
-    <option value="Classical Civilisation">Classical Civilisation</option>
-    <option value="Geography">Geography</option>
-    <option value="History">History</option>
-    <option value="Music">Music</option>
-    <option value="Sport Science">Sport Science</option>
-    <option value="Computer Science">Computer Science</option>
-    <option value="TP">TP</option>
-    <option value="Economics">Economics</option>
-  </select>
-</div>
+  <div class="form-group">
+    <label for="year">Year:</label>
+    <select id="year">
+      <option value="">Choose Year</option>
+      <option value="Year 7">Year 7</option>
+      <option value="Year 8">Year 8</option>
+      <option value="Year 9">Year 9</option>
+      <option value="Year 10">Year 10</option>
+      <option value="Year 11">Year 11</option>
+      <option value="Year 12">Year 12</option>
+      <option value="Year 13">Year 13</option>
+    </select>
+  </div>
 
-<div class="form-group">
-  <label for="score">Score (%):</label>
-  <input type="number" id="score" min="0" max="100" placeholder="Enter your score">
-</div>
+  <div class="form-group">
+    <label for="subject">Subject:</label>
+    <select id="subject">
+      <option value="">Choose Subject</option>
+      <option value="Maths">Maths</option>
+      <option value="Biology">Biology</option>
+      <option value="Chemistry">Chemistry</option>
+      <option value="Physics">Physics</option>
+      <option value="English">English</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Spanish">Spanish</option>
+      <option value="Latin">Latin</option>
+      <option value="Greek">Greek</option>
+      <option value="Classical Civilisation">Classical Civilisation</option>
+      <option value="Geography">Geography</option>
+      <option value="History">History</option>
+      <option value="Music">Music</option>
+      <option value="Sport Science">Sport Science</option>
+      <option value="Computer Science">Computer Science</option>
+      <option value="TP">TP</option>
+      <option value="Economics">Economics</option>
+    </select>
+  </div>
 
-<button id="submitScore">Submit Score</button>
+  <div class="form-group">
+    <label for="score">Score (%):</label>
+    <input type="number" id="score" min="0" max="100" placeholder="Enter your score">
+  </div>
 
-<h2>Your Progress</h2>
-<div id="chartsContainer"></div>
+  <button id="submitScore">Submit Score</button>
+
+  <h2>Your Progress</h2>
+  <div id="chartsContainer"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
