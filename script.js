@@ -14,133 +14,125 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const loginDiv = document.getElementById("login");
-const dashboardDiv = document.getElementById("dashboard");
-const chartsContainer = document.getElementById("charts");
+const authSection = document.getElementById("auth-section");
+const dashboard = document.getElementById("dashboard");
+const chartsContainer = document.getElementById("charts-container");
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    loginDiv.style.display = "none";
-    dashboardDiv.style.display = "block";
-    loadGraphs();
-  } else {
-    loginDiv.style.display = "block";
-    dashboardDiv.style.display = "none";
-  }
-});
-
-function signup() {
+function signUp() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   auth.createUserWithEmailAndPassword(email, password)
-    .catch(error => alert(error.message));
+    .then(() => document.getElementById("auth-status").textContent = "Signed up!")
+    .catch(err => document.getElementById("auth-status").textContent = err.message);
 }
 
-function login() {
+function signIn() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   auth.signInWithEmailAndPassword(email, password)
-    .catch(error => alert(error.message));
+    .then(() => {
+      document.getElementById("auth-status").textContent = "Logged in!";
+    })
+    .catch(err => document.getElementById("auth-status").textContent = err.message);
 }
 
 function signOut() {
-  auth.signOut();
+  auth.signOut().then(() => location.reload());
 }
 
-function submitScore() {
-  const year = document.getElementById('year').value;
-  const subject = document.getElementById('subject').value;
-  const score = parseFloat(document.getElementById('score').value);
+auth.onAuthStateChanged(user => {
+  if (user) {
+    authSection.style.display = "none";
+    dashboard.style.display = "block";
+    loadUserData(user.uid);
+  } else {
+    authSection.style.display = "block";
+    dashboard.style.display = "none";
+  }
+});
+
+function submitResult() {
+  const year = document.getElementById("year").value;
+  const subject = document.getElementById("subject").value;
+  const score = parseFloat(document.getElementById("score").value);
   const user = auth.currentUser;
 
-  if (!year || !subject || isNaN(score)) {
-    alert("Please fill in all fields correctly.");
-    return;
-  }
+  if (!year || !subject || isNaN(score) || !user) return;
 
-  const personalRef = db.ref(`userScores/${user.uid}/${year}/${subject}`);
-  const sharedRef = db.ref(`results/${year}/${subject}`);
+  const resultRef = db.ref(`results/${user.uid}/${subject}_${year}`).push();
+  resultRef.set({
+    score,
+    timestamp: Date.now()
+  });
 
-  const newEntry = {
-    score: score,
-    timestamp: Date.now(),
-    uid: user.uid
-  };
-
-  personalRef.push(newEntry);
-  sharedRef.push({ score: score });
-
-  document.getElementById('score').value = '';
-  loadGraphs(); // Refresh graphs
+  // Also store for global average
+  const avgRef = db.ref(`allResults/${subject}_${year}`).push();
+  avgRef.set({
+    score,
+    timestamp: Date.now()
+  });
 }
 
-function loadGraphs() {
-  const year = document.getElementById('year').value;
-  chartsContainer.innerHTML = '';
-  if (!year) return;
+function loadUserData(uid) {
+  chartsContainer.innerHTML = "";
 
-  const subjects = [
-    "Maths", "Biology", "Chemistry", "Physics", "English", "French", "German",
-    "Italian", "Spanish", "Latin", "Greek", "Classical Civilisation",
-    "Geography", "History", "Music", "Sport Science", "Computer Science", "TP", "Economics"
-  ];
+  db.ref(`results/${uid}`).on("value", snapshot => {
+    chartsContainer.innerHTML = "";
 
-  const userId = auth.currentUser.uid;
+    const data = snapshot.val();
+    if (!data) return;
 
-  subjects.forEach(subject => {
-    const personalRef = db.ref(`userScores/${userId}/${year}/${subject}`);
-    const sharedRef = db.ref(`results/${year}/${subject}`);
+    Object.keys(data).forEach(subjectYear => {
+      const scores = [];
+      const labels = [];
+      Object.values(data[subjectYear]).forEach((entry, i) => {
+        scores.push(entry.score);
+        labels.push(`Test ${i + 1}`);
+      });
 
-    Promise.all([
-      personalRef.once('value'),
-      sharedRef.once('value')
-    ]).then(([userSnap, avgSnap]) => {
-      const userData = userSnap.val();
-      const allData = avgSnap.val();
-
-      if (!userData) return;
-
-      const userScores = Object.values(userData).map(entry => entry.score);
-      const labels = userScores.map((_, i) => `Test ${i + 1}`);
-
-      const avgScores = allData ? Object.values(allData).map(e => e.score) : [];
-      const average = avgScores.length > 0 ? avgScores.reduce((a, b) => a + b, 0) / avgScores.length : 0;
-      const avgLine = new Array(userScores.length).fill(average);
-
-      const canvas = document.createElement('canvas');
-      chartsContainer.appendChild(document.createElement('h4')).innerText = `${subject} - ${year}`;
+      // Create chart canvas
+      const canvas = document.createElement("canvas");
+      chartsContainer.appendChild(document.createElement("hr"));
+      chartsContainer.appendChild(document.createTextNode(subjectYear));
       chartsContainer.appendChild(canvas);
 
-      new Chart(canvas, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Your Scores',
-              data: userScores,
-              borderColor: 'blue',
-              fill: false
-            },
-            {
-              label: 'Average Score',
-              data: avgLine,
-              borderColor: 'orange',
-              borderDash: [5, 5],
-              fill: false
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: true },
-            title: {
-              display: true,
-              text: `${subject} (${year})`
+      // Fetch average
+      db.ref(`allResults/${subjectYear}`).once("value", avgSnap => {
+        const allScores = Object.values(avgSnap.val() || {}).map(d => d.score);
+        const avg = allScores.reduce((a, b) => a + b, 0) / (allScores.length || 1);
+        const avgLine = Array(scores.length).fill(avg);
+
+        new Chart(canvas.getContext("2d"), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Your Scores",
+                data: scores,
+                borderColor: "blue",
+                fill: false
+              },
+              {
+                label: "Average Score",
+                data: avgLine,
+                borderColor: "red",
+                borderDash: [5, 5],
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              title: {
+                display: true,
+                text: `Subject: ${subjectYear}`
+              }
             }
           }
-        }
+        });
       });
     });
   });
