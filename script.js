@@ -9,118 +9,120 @@ const firebaseConfig = {
   appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
 };
 
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const database = firebase.database();
+const db = firebase.database();
 
-const loginDiv = document.getElementById("login");
-const dashboard = document.getElementById("dashboard");
+let currentUser = null;
+let chart = null;
 
-const loginEmail = document.getElementById("login-email");
-const loginPassword = document.getElementById("login-password");
-const signupEmail = document.getElementById("signup-email");
-const signupPassword = document.getElementById("signup-password");
-
-document.getElementById("login-btn").addEventListener("click", () => {
-  auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value)
-    .then(() => showDashboard())
-    .catch(err => alert(err.message));
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById("auth").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("userEmail").innerText = user.email;
+    updateChart();
+  } else {
+    currentUser = null;
+    document.getElementById("auth").style.display = "block";
+    document.getElementById("dashboard").style.display = "none";
+  }
 });
 
-document.getElementById("signup-btn").addEventListener("click", () => {
-  auth.createUserWithEmailAndPassword(signupEmail.value, signupPassword.value)
-    .then(() => showDashboard())
-    .catch(err => alert(err.message));
-});
-
-document.getElementById("logout-btn").addEventListener("click", () => {
-  auth.signOut();
-  loginDiv.style.display = "block";
-  dashboard.style.display = "none";
-});
-
-auth.onAuthStateChanged(user => {
-  if (user) showDashboard();
-});
-
-function showDashboard() {
-  loginDiv.style.display = "none";
-  dashboard.style.display = "block";
-  loadUserScores();
+function signUp() {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("password").value;
+  auth.createUserWithEmailAndPassword(email, pass).catch(alert);
 }
 
-document.getElementById("submit-score").addEventListener("click", () => {
-  const user = auth.currentUser;
+function login() {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("password").value;
+  auth.signInWithEmailAndPassword(email, pass).catch(alert);
+}
+
+function logout() {
+  auth.signOut();
+}
+
+function submitScore() {
   const subject = document.getElementById("subject").value;
   const year = document.getElementById("year").value;
-  const score = parseInt(document.getElementById("score").value);
+  const score = parseFloat(document.getElementById("score").value);
 
   if (!subject || !year || isNaN(score)) {
     alert("Please complete all fields.");
     return;
   }
 
-  const scoreData = {
-    subject,
-    year,
+  const userId = currentUser.uid;
+  const timestamp = Date.now();
+
+  db.ref(`scores/${userId}/${subject}/${timestamp}`).set({
     score,
-    timestamp: Date.now()
-  };
+    year
+  }).then(updateChart);
+}
 
-  database.ref("scores/" + user.uid).push(scoreData).then(() => {
-    loadUserScores();
-  });
-});
+function updateChart() {
+  const subject = document.getElementById("subject").value;
+  if (!subject || !currentUser) return;
 
-function loadUserScores() {
-  const user = auth.currentUser;
-  database.ref("scores/" + user.uid).once("value", snapshot => {
-    const scores = snapshot.val() || {};
-    const subjectMap = {};
+  const userId = currentUser.uid;
 
-    Object.values(scores).forEach(entry => {
-      if (!subjectMap[entry.subject]) {
-        subjectMap[entry.subject] = { labels: [], data: [] };
+  db.ref("scores").once("value").then((snapshot) => {
+    const allData = snapshot.val();
+    const userScores = [];
+    const allScores = [];
+
+    for (let uid in allData) {
+      if (allData[uid][subject]) {
+        for (let ts in allData[uid][subject]) {
+          const entry = allData[uid][subject][ts];
+          if (uid === userId) userScores.push(entry.score);
+          allScores.push(entry.score);
+        }
       }
-      const date = new Date(entry.timestamp).toLocaleDateString();
-      subjectMap[entry.subject].labels.push(date);
-      subjectMap[entry.subject].data.push(entry.score);
-    });
+    }
 
-    renderCharts(subjectMap);
+    renderChart(userScores, allScores, subject);
   });
 }
 
-function renderCharts(subjectMap) {
-  const container = document.getElementById("charts");
-  container.innerHTML = "";
+function renderChart(userData, avgData, subject) {
+  if (chart) chart.destroy();
 
-  Object.keys(subjectMap).forEach(subject => {
-    const chartCanvas = document.createElement("canvas");
-    container.appendChild(chartCanvas);
-
-    new Chart(chartCanvas, {
-      type: "line",
-      data: {
-        labels: subjectMap[subject].labels,
-        datasets: [{
-          label: `${subject} Score`,
-          data: subjectMap[subject].data,
+  chart = new Chart(document.getElementById("scoreChart").getContext("2d"), {
+    type: "line",
+    data: {
+      labels: userData.map((_, i) => `Test ${i + 1}`),
+      datasets: [
+        {
+          label: "Your Scores",
+          data: userData,
           borderColor: "blue",
-          backgroundColor: "lightblue",
-          fill: false,
-          tension: 0.1
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          title: {
-            display: true,
-            text: subject
-          }
+          fill: false
+        },
+        {
+          label: "Class Average",
+          data: Array(userData.length).fill(
+            avgData.reduce((a, b) => a + b, 0) / (avgData.length || 1)
+          ),
+          borderColor: "orange",
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: `Scores for ${subject}`
         }
       }
-    });
+    }
   });
 }
