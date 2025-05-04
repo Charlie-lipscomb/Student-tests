@@ -137,10 +137,24 @@ function loadAllGraphs() {
           }
         });
 
-        const averageScore = allScores.length
+        // Calculate average across ALL users for this subject and year
+        let allScores = [];
+        snapshot.forEach((userSnap) => {
+
+          const userData = userSnap.val();
+          if (userData.results) {
+            Object.values(userData.results).forEach((test) => {
+              if (test.subject === subject && test.year === year) {
+                allScores.push(parseFloat(test.score));
+              }
+            });
+          });
+
+        const averageScore = allScores.length > 0
           ? allScores.reduce((a, b) => a + b, 0) / allScores.length
           : 0;
-        const averageScores = new Array(userScores.length).fill(averageScore);
+        // Create a flat line to match the number of user's test scores
+        const averageScores = Array(userScores.length).fill(averageScore);
 
         // Update or create chart
         if (charts[key]) {
