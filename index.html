@@ -1,32 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Student Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Student Dashboard</h1>
+  <div id="auth-section">
+    <h2>Login or Sign Up</h2>
+    <input type="email" id="email" placeholder="Email"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="logIn()">Log In</button>
+  </div>
+
+  <div id="dashboard" style="display: none;">
+    <h2>Welcome, <span id="userEmail"></span></h2>
+    <button onclick="logOut()">Log Out</button>
     
-    <div id="auth">
-      <input type="email" id="email" placeholder="Email" />
-      <input type="password" id="password" placeholder="Password" />
-      <button onclick="signUp()">Sign Up</button>
-      <button onclick="login()">Login</button>
-    </div>
-
-    <div id="dashboard" style="display: none;">
-      <p>Welcome, <span id="userEmail"></span></p>
-      <button onclick="logout()">Logout</button>
-
-      <select id="year">
-        <option value="">Choose Year</option>
+    <h3>Submit a Score</h3>
+    <select id="year">
+      <option value="">Choose Year</option>
         <option value="LS 1">LS 1</option>
         <option value="LS 2">LS 2</option>
         <option value="Removes">Removes</option>
@@ -35,37 +30,39 @@
         <option value="Lower Sixth">Lower Sixth</option>
         <option value="Upper Sixth">Upper Sixth</option>
       </select>
+    
+    <select id="subject">
+      <option value="">Choose Subject</option>
+      <option value="Maths">Maths</option>
+      <option value="Biology">Biology</option>
+      <option value="Chemistry">Chemistry</option>
+      <option value="Physics">Physics</option>
+      <option value="English">English</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Spanish">Spanish</option>
+      <option value="Latin">Latin</option>
+      <option value="Greek">Greek</option>
+      <option value="Classical Civilisation">Classical Civilisation</option>
+      <option value="Geography">Geography</option>
+      <option value="History">History</option>
+      <option value="Music">Music</option>
+      <option value="Sport Science">Sport Science</option>
+      <option value="Computer Science">Computer Science</option>
+      <option value="TP">TP</option>
+      <option value="Economics">Economics</option>
+    </select>
 
-      <select id="subject">
-        <option value="">Choose Subject</option>
-        <option value="Maths">Maths</option>
-        <option value="Biology">Biology</option>
-        <option value="Chemistry">Chemistry</option>
-        <option value="Physics">Physics</option>
-        <option value="English">English</option>
-        <option value="French">French</option>
-        <option value="German">German</option>
-        <option value="Italian">Italian</option>
-        <option value="Spanish">Spanish</option>
-        <option value="Latin">Latin</option>
-        <option value="Greek">Greek</option>
-        <option value="Classical Civilisation">Classical Civilisation</option>
-        <option value="Geography">Geography</option>
-        <option value="History">History</option>
-        <option value="Music">Music</option>
-        <option value="Sport Science">Sport Science</option>
-        <option value="Computer Science">Computer Science</option>
-        <option value="TP">TP</option>
-        <option value="Economics">Economics</option>
-      </select>
+    <input type="number" id="score" placeholder="Score (0-100)">
+    <button onclick="submitScore()">Submit Score</button>
 
-      <input type="number" id="score" placeholder="Score" />
-      <button onclick="submitScore()">Submit Score</button>
-
-      <canvas id="scoreChart" width="400" height="200"></canvas>
-    </div>
+    <canvas id="scoreChart"></canvas>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
