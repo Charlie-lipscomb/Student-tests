@@ -8,157 +8,119 @@ const firebaseConfig = {
   messagingSenderId: "878760132447",
   appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
 };
-firebase.initializeApp(firebaseConfig);
 
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-const subjects = [
-  "Maths", "Biology", "Chemistry", "Physics", "English", "French", "German",
-  "Italian", "Spanish", "Latin", "Greek", "Classical Civilisation",
-  "Geography", "History", "Music", "Sport Science", "Computer Science", "TP", "Economics"
-];
+const loginDiv = document.getElementById("login");
+const dashboard = document.getElementById("dashboard");
 
-let charts = {}; // Store Chart.js instances
+const loginEmail = document.getElementById("login-email");
+const loginPassword = document.getElementById("login-password");
+const signupEmail = document.getElementById("signup-email");
+const signupPassword = document.getElementById("signup-password");
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
-    fetchAndDisplayScoresRealtime();
-  } else {
-    document.getElementById("login").style.display = "block";
-    document.getElementById("dashboard").style.display = "none";
-  }
+document.getElementById("login-btn").addEventListener("click", () => {
+  auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value)
+    .then(() => showDashboard())
+    .catch(err => alert(err.message));
 });
 
-// Sign up
-document.getElementById("signup-btn").onclick = () => {
-  const email = document.getElementById("signup-email").value;
-  const password = document.getElementById("signup-password").value;
-  auth.createUserWithEmailAndPassword(email, password).catch(console.error);
-};
+document.getElementById("signup-btn").addEventListener("click", () => {
+  auth.createUserWithEmailAndPassword(signupEmail.value, signupPassword.value)
+    .then(() => showDashboard())
+    .catch(err => alert(err.message));
+});
 
-// Log in
-document.getElementById("login-btn").onclick = () => {
-  const email = document.getElementById("login-email").value;
-  const password = document.getElementById("login-password").value;
-  auth.signInWithEmailAndPassword(email, password).catch(console.error);
-};
+document.getElementById("logout-btn").addEventListener("click", () => {
+  auth.signOut();
+  loginDiv.style.display = "block";
+  dashboard.style.display = "none";
+});
 
-// Log out
-document.getElementById("logout-btn").onclick = () => auth.signOut();
+auth.onAuthStateChanged(user => {
+  if (user) showDashboard();
+});
 
-// Submit a new score
-document.getElementById("submit-score").onclick = () => {
+function showDashboard() {
+  loginDiv.style.display = "none";
+  dashboard.style.display = "block";
+  loadUserScores();
+}
+
+document.getElementById("submit-score").addEventListener("click", () => {
   const user = auth.currentUser;
   const subject = document.getElementById("subject").value;
-  const score = parseFloat(document.getElementById("score").value);
+  const year = document.getElementById("year").value;
+  const score = parseInt(document.getElementById("score").value);
 
-  if (!user || !subject || isNaN(score)) {
-    alert("Fill in all fields properly.");
+  if (!subject || !year || isNaN(score)) {
+    alert("Please complete all fields.");
     return;
   }
 
-  const timestamp = Date.now();
-  const scoreData = { score, timestamp };
+  const scoreData = {
+    subject,
+    year,
+    score,
+    timestamp: Date.now()
+  };
 
-  database.ref(`scores/${user.uid}/${subject}`).push(scoreData)
-    .then(() => {
-      document.getElementById("score").value = "";
-      fetchAndDisplayScoresRealtime();
-    })
-    .catch(console.error);
-};
+  database.ref("scores/" + user.uid).push(scoreData).then(() => {
+    loadUserScores();
+  });
+});
 
-// Fetch user scores and update graphs
-function fetchAndDisplayScoresRealtime() {
+function loadUserScores() {
   const user = auth.currentUser;
-  if (!user) return;
+  database.ref("scores/" + user.uid).once("value", snapshot => {
+    const scores = snapshot.val() || {};
+    const subjectMap = {};
 
-  subjects.forEach(subject => {
-    const userRef = database.ref(`scores/${user.uid}/${subject}`);
-    const allRef = database.ref(`scores`);
-
-    userRef.once("value", snapshot => {
-      const labels = [];
-      const userScores = [];
-
-      snapshot.forEach(child => {
-        const data = child.val();
-        userScores.push(data.score);
-        labels.push(new Date(data.timestamp).toLocaleDateString());
-      });
-
-      // Compute average across all users
-      let total = 0, count = 0;
-      allRef.once("value", allSnap => {
-        allSnap.forEach(userSnap => {
-          const subjSnap = userSnap.child(subject);
-          subjSnap.forEach(scoreSnap => {
-            const scoreVal = scoreSnap.val().score;
-            total += scoreVal;
-            count++;
-          });
-        });
-
-        const average = count ? (total / count) : 0;
-        const avgLine = Array(userScores.length).fill(average);
-
-        drawChart(subject, labels, userScores, avgLine);
-      });
+    Object.values(scores).forEach(entry => {
+      if (!subjectMap[entry.subject]) {
+        subjectMap[entry.subject] = { labels: [], data: [] };
+      }
+      const date = new Date(entry.timestamp).toLocaleDateString();
+      subjectMap[entry.subject].labels.push(date);
+      subjectMap[entry.subject].data.push(entry.score);
     });
+
+    renderCharts(subjectMap);
   });
 }
 
-// Draw chart
-function drawChart(subject, labels, userData, avgData) {
-  const canvasId = `${subject}Chart`;
-  const ctx = document.getElementById(canvasId)?.getContext("2d");
-  if (!ctx) return;
+function renderCharts(subjectMap) {
+  const container = document.getElementById("charts");
+  container.innerHTML = "";
 
-  // Destroy previous chart
-  if (charts[subject]) {
-    charts[subject].destroy();
-  }
+  Object.keys(subjectMap).forEach(subject => {
+    const chartCanvas = document.createElement("canvas");
+    container.appendChild(chartCanvas);
 
-  charts[subject] = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: `${subject} - Your Scores`,
-          data: userData,
-          borderColor: 'rgba(54, 162, 235, 1)',
-          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+    new Chart(chartCanvas, {
+      type: "line",
+      data: {
+        labels: subjectMap[subject].labels,
+        datasets: [{
+          label: `${subject} Score`,
+          data: subjectMap[subject].data,
+          borderColor: "blue",
+          backgroundColor: "lightblue",
           fill: false,
-          tension: 0.2
-        },
-        {
-          label: `${subject} - Average`,
-          data: avgData,
-          borderColor: 'rgba(255, 99, 132, 1)',
-          borderDash: [5, 5],
-          fill: false,
-          tension: 0.2
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        title: {
-          display: true,
-          text: `${subject} Scores Over Time`
-        }
+          tension: 0.1
+        }]
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100
+      options: {
+        responsive: true,
+        plugins: {
+          title: {
+            display: true,
+            text: subject
+          }
         }
       }
-    }
+    });
   });
 }
