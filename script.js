@@ -1,13 +1,11 @@
-
-// Firebase config - replace with your own!
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  apiKey: "AIzaSyDWZ3NbTOaRoUjh7stKklyCiBDWH4mdRC0",
+  authDomain: "student-tests-f85fd.firebaseapp.com",
+  databaseURL: "https://student-tests-f85fd-default-rtdb.firebaseio.com",
+  projectId: "student-tests-f85fd",
+  storageBucket: "student-tests-f85fd.firebasestorage.app",
+  messagingSenderId: "878760132447",
+  appId: "1:878760132447:web:fad870bd99112df6e0c0ea",
 };
 
 firebase.initializeApp(firebaseConfig);
